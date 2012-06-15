@@ -14,13 +14,7 @@ html{
 	line-height: 1.8;
 }
 
-#dropbox{
-	border: 1px #333 solid;
-	width: 300px;
-	height: 300px;
-}
-
-#base64{
+#log{
 	height: 200px;
 	width: 80%;
 	overflow: auto;
@@ -41,7 +35,7 @@ input[type="text"]{
 
 </style>
 
-<script src="../JavaScriptOS/Dinos/Dinos/Libraries/jsdeferred.js"></script>
+<script src="jsdeferred.js"></script>
 <script>
 
 function $(id){
@@ -87,7 +81,6 @@ function generateMusic(data, files){
 		var colorData = ctx.getImageData(0, 0, width, height);
 		
 		var SAMPLE_RATE = 44100;
-		var nowplaying = $('nowplaying');
 		
 		Deferred.loop({begin: 0, end: width * height * 4 - 1, step: 4 }, function(i){
 			//load prefs
@@ -165,8 +158,8 @@ function generateMusic(data, files){
 				}
 			}
 			
-			//now playing
-			var log = $('base64');
+			//log
+			var log = $('log');
 			log.innerHTML = 'Index:' + i + ', Red: ' + R + ', Green: ' + G + ', Blue: ' + 
 									B + ', A: ' + A + ', freq: ' + freq + 'Hz, length: ' + length + 's' + ', env: ' + envelope +
 							'<br/>' + log.innerHTML;
@@ -215,7 +208,7 @@ Playing Image:<br />
 <canvas id="canvas"></canvas><br /><br />
 
 Playing Data:<br />
-<div id="base64"></div>
+<div id="log"></div>
 
 </body>
 
