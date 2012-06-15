@@ -103,7 +103,7 @@ function generateMusic(data, files){
 			var A = colorData.data[i+3];
 			
 			//set length
-			var length = eval(lengthFormula);;
+			var length = eval(lengthFormula);
 
 			var buffer = new Float32Array(Math.ceil(SAMPLE_RATE * length));
 			
@@ -148,7 +148,7 @@ function generateMusic(data, files){
 				var envLength = buffer.length * envelope;
 				
 				for(var j=0; j<envLength; j++)
-					buffer[i] *= j / envLength;
+					buffer[j] *= j / envLength;
 			}
 			
 			//fade
