@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+
+<html lang="ja">
+
+<head>
+
+<meta charset="utf-8">
+
+<title>Music Generator</title>
+
+<style>
+
+html{
+	line-height: 1.8;
+}
+
+#dropbox{
+	border: 1px #333 solid;
+	width: 300px;
+	height: 300px;
+}
+
+#base64{
+	height: 200px;
+	width: 80%;
+	overflow: auto;
+	font-size: 90%;
+}
+
+#image{
+	float: left;
+	margin-right: 3em;
+}
+
+input[type="text"]{
+	border: 1px black solid;
+	outline: none;
+	padding: 3px;
+	color: #353535;
+}
+
+</style>
+
+<script src="../JavaScriptOS/Dinos/Dinos/Libraries/jsdeferred.js"></script>
+<script>
+
+function $(id){
+	return document.getElementById(id);
+}
+
+function _loadFile(files){
+	var reader = new FileReader();
+
+	reader.onload = function(event){
+		generateMusic(event.target.result);
+	};
+
+	//読み込み
+	reader.readAsDataURL(files[0]);
+}
+
+function getActualDimention(image){
+	return {
+		width: image.naturalWidth,
+		height: image.naturalHeight
+	};
+}
+	
+function generateMusic(data, files){
+	var canvas = $('canvas');
+	var ctx = canvas.getContext('2d');
+	
+	var image = new Image();
+	image.src = data;
+	
+	image.onload = function(){
+	
+		var size = getActualDimention(image);
+
+		var height = size.width;
+		var width = size.height;
+		
+		canvas.width = width;
+		canvas.height = height;
+		ctx.drawImage(image, 0, 0);
+	
+		var colorData = ctx.getImageData(0, 0, width, height);
+		
+		var SAMPLE_RATE = 44100;
+		var nowplaying = $('nowplaying');
+		
+		Deferred.loop({begin: 0, end: width * height * 4 - 1, step: 4 }, function(i){
+			//load prefs
+			var freqFormula = $('freq').value;
+			var lengthFormula = $('length').value;
+			var envelopeFormula = $('envelope').value;
+			var waveType = document.querySelector('input[name="waveType"]:checked').value;
+			var doFade = $('fade').checked;
+			
+		
+			var audio = new Audio();
+		
+			//setup
+			audio.mozSetup(1, SAMPLE_RATE);
+			
+			//load color data
+			var R = colorData.data[i];
+			var G = colorData.data[i+1];
+			var B = colorData.data[i+2];
+			var A = colorData.data[i+3];
+			
+			//set length
+			var length = eval(lengthFormula);;
+
+			var buffer = new Float32Array(Math.ceil(SAMPLE_RATE * length));
+			
+			//set frequency
+			var freq = eval(freqFormula);
+
+			
+			//create a wave data
+			var k = 2 * Math.PI * freq / SAMPLE_RATE;
+			
+			for(var j=0, n=buffer.length; j<n; j++){
+				switch(waveType){
+				
+					case 'sin':
+						buffer[j] = Math.sin(k * j);
+						break;
+						
+					case 'square':
+						buffer[j] = Math.sin(k * j) > 0 ? 1 : -1;
+						break;
+					
+					case 'triangle':
+						buffer[j] = Math.PI/2 - (4/Math.PI) * ( Math.cos(k * j) + Math.cos(3 * k * j) / 9 + Math.cos(5 * k * j) / 25 + Math.cos(7*k*j)/49 );
+						break;
+						
+					case 'sawtooth':
+						buffer[j] = 2/Math.PI * (Math.sin(k*j) + Math.sin(2*k*j)/2 + Math.sin(3*k*j)/3 + Math.sin(4*k*j)/4 + Math.sin(5*k*j)/5 +
+													Math.sin(6*k*j)/6 + Math.sin(7*k*j)/7 + Math.sin(8*k*j)/8 + Math.sin(9*k*j)/9 + Math.sin(10*k*j)/10 );
+						break;
+						
+					default:
+						buffer[j] = Math.sin(k*j);
+						break;
+
+				}
+			}
+			
+			//envelope
+			var envelope = eval(envelopeFormula);
+			
+			if(envelope){
+				var envLength = buffer.length * envelope;
+				
+				for(var j=0; j<envLength; j++)
+					buffer[i] *= j / envLength;
+			}
+			
+			//fade
+			if(doFade){
+				for(var j=0, n=buffer.length; j<n; j++){
+					buffer[j] *= (n-j) / n;
+				}
+			}
+			
+			//now playing
+			var log = $('base64');
+			log.innerHTML = 'Index:' + i + ', Red: ' + R + ', Green: ' + G + ', Blue: ' + 
+									B + ', A: ' + A + ', freq: ' + freq + 'Hz, length: ' + length + 's' + ', env: ' + envelope +
+							'<br/>' + log.innerHTML;
+							
+			//play
+			audio.mozWriteAudio(buffer);
+			audio.play();
+			
+			//delay
+			return Deferred.wait(length);
+		}).error(function(er){ alert(er) });
+	}
+}
+
+
+</script>
+
+
+</head>
+
+<body>
+
+<h1>Music Generator</h1>
+
+Generates a music from a image file. <br /><br />
+
+Source File: <input type="file" id="filepicker" /><br /><br />
+
+<b>[Options] R: Red, G: Green, B: Blue, A: Alpha (<a href="http://www.htmq.com/css3/rgba.shtml">RGBA Color Code</a>)</b>
+<div id="options">
+	Frequency: <input type="text" value="Math.floor((R+G+B) / 3) + 100" id="freq" /> Hz<br />
+	Sound Length: <input type="text" value="(R+G)/1000" id="length" /> s<br />
+	Envelope: <input type="text" value="0" id="envelope" /><br />
+	Type of Wave: <input type="radio" name="waveType" value="sin" checked="checked">Sin
+				  <input type="radio" name="waveType" value="square">Square 
+				  <input type="radio" name="waveType" value="triangle">Triangle
+				  <input type="radio" name="waveType" value="sawtooth">Sawtooth <br />
+	<input type="checkbox" checked="checked" id="fade"> Fade <br /><br />
+</div>
+
+<button onclick="_loadFile($('filepicker').files);">Play</button>
+
+<br /><br />
+
+Playing Image:<br />
+<canvas id="canvas"></canvas><br /><br />
+
+Playing Data:<br />
+<div id="base64"></div>
+
+</body>
+
+</html>
